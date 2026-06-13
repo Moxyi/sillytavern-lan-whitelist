@@ -2,7 +2,6 @@
 const extensionName = 'sillytavern-lan-whitelist';
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const MODULE_NAME = 'lan-whitelist';
-const API_BASE = '/api/plugins/lan-whitelist-manager';
 
 const defaultSettings = {
     autoRefresh: true,
@@ -26,34 +25,39 @@ function saveSettings() {
     localStorage.setItem(`st-ext-${MODULE_NAME}-settings`, JSON.stringify(currentSettings));
 }
 
+// 使用现有的 SillyTavern API 端点
 async function fetchNetworkInfo() {
     try {
-        const response = await fetch(`${API_BASE}/network`);
-        if (!response.ok) throw new Error('Failed to fetch network info');
+        const response = await fetch('/api/whitelist-info');
+        if (!response.ok) {
+            // 如果没有这个端点，显示手动添加界面
+            return { interfaces: [], message: 'Server does not support network interface detection. Please add IPs manually.' };
+        }
         networkInfo = await response.json();
         return networkInfo;
     } catch (error) {
         console.error('[LAN Whitelist] Failed to fetch network info:', error);
-        return null;
+        return { interfaces: [], message: 'Unable to detect network interfaces. Please add IPs manually.' };
     }
 }
 
 async function fetchWhitelist() {
     try {
-        const response = await fetch(`${API_BASE}/whitelist`);
+        const response = await fetch('/api/whitelist-entries');
         if (!response.ok) throw new Error('Failed to fetch whitelist');
         const data = await response.json();
         whitelistEntries = data.entries || [];
         return whitelistEntries;
     } catch (error) {
         console.error('[LAN Whitelist] Failed to fetch whitelist:', error);
+        whitelistEntries = ['Unable to fetch whitelist entries'];
         return [];
     }
 }
 
 async function fetchBlockedAttempts() {
     try {
-        const response = await fetch(`${API_BASE}/blocked`);
+        const response = await fetch('/api/blocked-attempts');
         if (!response.ok) throw new Error('Failed to fetch blocked attempts');
         const data = await response.json();
         blockedAttempts = data.attempts || [];
@@ -66,7 +70,7 @@ async function fetchBlockedAttempts() {
 
 async function addToWhitelist(ip) {
     try {
-        const response = await fetch(`${API_BASE}/whitelist/add`, {
+        const response = await fetch('/api/add-to-whitelist', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ip }),
@@ -77,7 +81,7 @@ async function addToWhitelist(ip) {
             throw new Error(error.error || 'Failed to add IP to whitelist');
         }
 
-        toastr.success(`IP ${ip} added to whitelist`);
+        toastr.success(`IP ${ip} added to whitelist. Restart SillyTavern for changes to take effect.`);
         await refreshData();
     } catch (error) {
         console.error('[LAN Whitelist] Failed to add to whitelist:', error);
@@ -91,7 +95,7 @@ async function addSubnetToWhitelist(subnet) {
 
 async function clearBlockedAttempts() {
     try {
-        const response = await fetch(`${API_BASE}/blocked/clear`, {
+        const response = await fetch('/api/clear-blocked-attempts', {
             method: 'POST',
         });
 
@@ -124,7 +128,8 @@ function renderNetworkInfo() {
     if (!container) return;
 
     if (!networkInfo || !networkInfo.interfaces || networkInfo.interfaces.length === 0) {
-        container.innerHTML = '<div class="notice">No network interfaces found. Make sure server plugin is installed in plugins/lan-whitelist-manager/</div>';
+        const msg = networkInfo?.message || 'No network interfaces detected';
+        container.innerHTML = `<div class="notice">${msg}</div>`;
         return;
     }
 
