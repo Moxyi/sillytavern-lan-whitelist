@@ -1,6 +1,5 @@
-import { getRequestHeaders, saveSettingsDebounced } from '../../../script.js';
+import { getRequestHeaders, saveSettingsDebounced, eventSource, event_types } from '../../../script.js';
 import { extension_settings, renderExtensionTemplateAsync } from '../../extensions.js';
-import { eventSource, event_types } from '../../../script.js';
 
 const MODULE_NAME = 'lan-whitelist';
 const API_BASE = '/api/whitelist-manager';
@@ -10,7 +9,6 @@ const defaultSettings = {
     refreshInterval: 5000,
 };
 
-let settings = defaultSettings;
 let networkInfo = null;
 let whitelistEntries = [];
 let blockedAttempts = [];
@@ -20,7 +18,6 @@ function loadSettings() {
     if (!extension_settings[MODULE_NAME]) {
         extension_settings[MODULE_NAME] = structuredClone(defaultSettings);
     }
-    settings = extension_settings[MODULE_NAME];
 }
 
 function saveSettings() {
@@ -168,7 +165,7 @@ function renderNetworkInfo() {
     if (!container) return;
 
     if (!networkInfo || !networkInfo.interfaces || networkInfo.interfaces.length === 0) {
-        container.innerHTML = '<div class="notice">No network interfaces found</div>';
+        container.innerHTML = '<div class="notice">No network interfaces found. Make sure server-side API is configured.</div>';
         return;
     }
 
@@ -177,9 +174,11 @@ function renderNetworkInfo() {
     for (const iface of networkInfo.interfaces) {
         html += `
             <div class="network-interface">
-                <div class="interface-name">${iface.name}</div>
-                <div class="interface-ip">${iface.address}</div>
-                <button class="menu_button" onclick="window.addLanSubnet('${iface.subnet}')">
+                <div>
+                    <div class="interface-name">${iface.name}</div>
+                    <div class="interface-ip">${iface.address}</div>
+                </div>
+                <button class="menu_button" data-subnet="${iface.subnet}">
                     Add subnet ${iface.subnet}
                 </button>
             </div>
@@ -188,6 +187,14 @@ function renderNetworkInfo() {
 
     html += '</div>';
     container.innerHTML = html;
+
+    // Bind events after rendering
+    container.querySelectorAll('button[data-subnet]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const subnet = e.target.getAttribute('data-subnet');
+            if (subnet) addSubnetToWhitelist(subnet);
+        });
+    });
 }
 
 function renderWhitelist() {
@@ -233,7 +240,7 @@ function renderBlockedAttempts() {
                     <div class="attempt-time">${new Date(attempt.lastSeen).toLocaleString()}</div>
                     <div class="attempt-count">Attempts: ${attempt.count}</div>
                 </div>
-                <button class="menu_button" onclick="window.addToWhitelistFromBlocked('${ip}')">
+                <button class="menu_button" data-ip="${ip}">
                     Approve
                 </button>
             </div>
@@ -242,13 +249,17 @@ function renderBlockedAttempts() {
 
     html += '</div>';
     container.innerHTML = html;
+
+    // Bind events after rendering
+    container.querySelectorAll('button[data-ip]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const ip = e.target.getAttribute('data-ip');
+            if (ip) addToWhitelist(ip);
+        });
+    });
 }
 
 function setupEventHandlers() {
-    // Global functions for inline onclick handlers
-    window.addLanSubnet = addSubnetToWhitelist;
-    window.addToWhitelistFromBlocked = addToWhitelist;
-
     // Refresh button
     const refreshBtn = document.getElementById('lan_whitelist_refresh');
     if (refreshBtn) {
@@ -282,8 +293,9 @@ function startAutoRefresh() {
         clearInterval(refreshTimer);
     }
 
-    if (settings.autoRefresh) {
-        refreshTimer = setInterval(refreshData, settings.refreshInterval);
+    const settings = extension_settings[MODULE_NAME];
+    if (settings && settings.autoRefresh) {
+        refreshTimer = setInterval(refreshData, settings.refreshInterval || 5000);
     }
 }
 
@@ -295,25 +307,34 @@ function stopAutoRefresh() {
 }
 
 async function init() {
-    loadSettings();
+    try {
+        loadSettings();
 
-    const settingsHtml = await renderExtensionTemplateAsync(MODULE_NAME, 'settings');
-    const container = document.getElementById('extensions_settings2');
+        const settingsHtml = await renderExtensionTemplateAsync(MODULE_NAME, 'settings');
+        const container = document.getElementById('extensions_settings2');
 
-    if (container && settingsHtml) {
-        container.insertAdjacentHTML('beforeend', settingsHtml);
+        if (container && settingsHtml) {
+            container.insertAdjacentHTML('beforeend', settingsHtml);
+        }
+
+        setupEventHandlers();
+        await refreshData();
+        startAutoRefresh();
+
+        console.log('LAN Whitelist Manager extension loaded successfully');
+    } catch (error) {
+        console.error('Failed to initialize LAN Whitelist Manager:', error);
+        throw error;
     }
-
-    setupEventHandlers();
-    await refreshData();
-    startAutoRefresh();
-
-    console.log('LAN Whitelist Manager extension loaded');
 }
 
 // Initialize when DOM is ready
 jQuery(async () => {
-    await init();
+    try {
+        await init();
+    } catch (error) {
+        console.error('LAN Whitelist Manager initialization error:', error);
+    }
 });
 
 // Cleanup on page unload
