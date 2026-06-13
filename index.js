@@ -1,6 +1,6 @@
-import { getRequestHeaders, saveSettingsDebounced, eventSource, event_types } from '../../../../script.js';
-import { extension_settings, renderExtensionTemplateAsync } from '../../../extensions.js';
-
+// LAN Whitelist Manager Extension
+const extensionName = 'sillytavern-lan-whitelist';
+const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 const MODULE_NAME = 'lan-whitelist';
 const API_BASE = '/api/plugins/lan-whitelist-manager';
 
@@ -9,76 +9,57 @@ const defaultSettings = {
     refreshInterval: 5000,
 };
 
+let currentSettings = defaultSettings;
 let networkInfo = null;
 let whitelistEntries = [];
 let blockedAttempts = [];
 let refreshTimer = null;
 
 function loadSettings() {
-    if (!extension_settings[MODULE_NAME]) {
-        extension_settings[MODULE_NAME] = structuredClone(defaultSettings);
+    const stored = localStorage.getItem(`st-ext-${MODULE_NAME}-settings`);
+    if (stored) {
+        currentSettings = { ...defaultSettings, ...JSON.parse(stored) };
     }
 }
 
 function saveSettings() {
-    saveSettingsDebounced();
+    localStorage.setItem(`st-ext-${MODULE_NAME}-settings`, JSON.stringify(currentSettings));
 }
 
 async function fetchNetworkInfo() {
     try {
-        const response = await fetch(`${API_BASE}/network`, {
-            method: 'GET',
-            headers: getRequestHeaders(),
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch network info');
-        }
-
+        const response = await fetch(`${API_BASE}/network`);
+        if (!response.ok) throw new Error('Failed to fetch network info');
         networkInfo = await response.json();
         return networkInfo;
     } catch (error) {
-        console.error('Failed to fetch network info:', error);
+        console.error('[LAN Whitelist] Failed to fetch network info:', error);
         return null;
     }
 }
 
 async function fetchWhitelist() {
     try {
-        const response = await fetch(`${API_BASE}/whitelist`, {
-            method: 'GET',
-            headers: getRequestHeaders(),
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch whitelist');
-        }
-
+        const response = await fetch(`${API_BASE}/whitelist`);
+        if (!response.ok) throw new Error('Failed to fetch whitelist');
         const data = await response.json();
         whitelistEntries = data.entries || [];
         return whitelistEntries;
     } catch (error) {
-        console.error('Failed to fetch whitelist:', error);
+        console.error('[LAN Whitelist] Failed to fetch whitelist:', error);
         return [];
     }
 }
 
 async function fetchBlockedAttempts() {
     try {
-        const response = await fetch(`${API_BASE}/blocked`, {
-            method: 'GET',
-            headers: getRequestHeaders(),
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch blocked attempts');
-        }
-
+        const response = await fetch(`${API_BASE}/blocked`);
+        if (!response.ok) throw new Error('Failed to fetch blocked attempts');
         const data = await response.json();
         blockedAttempts = data.attempts || [];
         return blockedAttempts;
     } catch (error) {
-        console.error('Failed to fetch blocked attempts:', error);
+        console.error('[LAN Whitelist] Failed to fetch blocked attempts:', error);
         return [];
     }
 }
@@ -87,59 +68,38 @@ async function addToWhitelist(ip) {
     try {
         const response = await fetch(`${API_BASE}/whitelist/add`, {
             method: 'POST',
-            headers: getRequestHeaders(),
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ip }),
         });
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.message || 'Failed to add IP to whitelist');
+            throw new Error(error.error || 'Failed to add IP to whitelist');
         }
 
         toastr.success(`IP ${ip} added to whitelist`);
         await refreshData();
     } catch (error) {
-        console.error('Failed to add to whitelist:', error);
+        console.error('[LAN Whitelist] Failed to add to whitelist:', error);
         toastr.error(error.message);
     }
 }
 
 async function addSubnetToWhitelist(subnet) {
-    try {
-        const response = await fetch(`${API_BASE}/whitelist/add`, {
-            method: 'POST',
-            headers: getRequestHeaders(),
-            body: JSON.stringify({ ip: subnet }),
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Failed to add subnet to whitelist');
-        }
-
-        toastr.success(`Subnet ${subnet} added to whitelist`);
-        await refreshData();
-    } catch (error) {
-        console.error('Failed to add subnet to whitelist:', error);
-        toastr.error(error.message);
-    }
+    await addToWhitelist(subnet);
 }
 
 async function clearBlockedAttempts() {
     try {
         const response = await fetch(`${API_BASE}/blocked/clear`, {
             method: 'POST',
-            headers: getRequestHeaders(),
         });
 
-        if (!response.ok) {
-            throw new Error('Failed to clear blocked attempts');
-        }
-
+        if (!response.ok) throw new Error('Failed to clear blocked attempts');
         toastr.success('Blocked attempts cleared');
         await refreshData();
     } catch (error) {
-        console.error('Failed to clear blocked attempts:', error);
+        console.error('[LAN Whitelist] Failed to clear blocked attempts:', error);
         toastr.error(error.message);
     }
 }
@@ -150,7 +110,6 @@ async function refreshData() {
         fetchWhitelist(),
         fetchBlockedAttempts(),
     ]);
-
     renderUI();
 }
 
@@ -165,7 +124,7 @@ function renderNetworkInfo() {
     if (!container) return;
 
     if (!networkInfo || !networkInfo.interfaces || networkInfo.interfaces.length === 0) {
-        container.innerHTML = '<div class="notice">No network interfaces found. Make sure server-side API is configured.</div>';
+        container.innerHTML = '<div class="notice">No network interfaces found. Make sure server plugin is installed in plugins/lan-whitelist-manager/</div>';
         return;
     }
 
@@ -178,7 +137,7 @@ function renderNetworkInfo() {
                     <div class="interface-name">${iface.name}</div>
                     <div class="interface-ip">${iface.address}</div>
                 </div>
-                <button class="menu_button" data-subnet="${iface.subnet}">
+                <button class="menu_button subnet-btn" data-subnet="${iface.subnet}">
                     Add subnet ${iface.subnet}
                 </button>
             </div>
@@ -188,8 +147,7 @@ function renderNetworkInfo() {
     html += '</div>';
     container.innerHTML = html;
 
-    // Bind events after rendering
-    container.querySelectorAll('button[data-subnet]').forEach(btn => {
+    container.querySelectorAll('.subnet-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const subnet = e.target.getAttribute('data-subnet');
             if (subnet) addSubnetToWhitelist(subnet);
@@ -207,15 +165,9 @@ function renderWhitelist() {
     }
 
     let html = '<div class="whitelist-entries">';
-
     for (const entry of whitelistEntries) {
-        html += `
-            <div class="whitelist-entry">
-                <span class="entry-ip">${entry}</span>
-            </div>
-        `;
+        html += `<div class="whitelist-entry"><span class="entry-ip">${entry}</span></div>`;
     }
-
     html += '</div>';
     container.innerHTML = html;
 }
@@ -240,9 +192,7 @@ function renderBlockedAttempts() {
                     <div class="attempt-time">${new Date(attempt.lastSeen).toLocaleString()}</div>
                     <div class="attempt-count">Attempts: ${attempt.count}</div>
                 </div>
-                <button class="menu_button" data-ip="${ip}">
-                    Approve
-                </button>
+                <button class="menu_button approve-btn" data-ip="${ip}">Approve</button>
             </div>
         `;
     }
@@ -250,8 +200,7 @@ function renderBlockedAttempts() {
     html += '</div>';
     container.innerHTML = html;
 
-    // Bind events after rendering
-    container.querySelectorAll('button[data-ip]').forEach(btn => {
+    container.querySelectorAll('.approve-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const ip = e.target.getAttribute('data-ip');
             if (ip) addToWhitelist(ip);
@@ -260,19 +209,16 @@ function renderBlockedAttempts() {
 }
 
 function setupEventHandlers() {
-    // Refresh button
     const refreshBtn = document.getElementById('lan_whitelist_refresh');
     if (refreshBtn) {
         refreshBtn.addEventListener('click', refreshData);
     }
 
-    // Clear blocked button
     const clearBtn = document.getElementById('lan_whitelist_clear_blocked');
     if (clearBtn) {
         clearBtn.addEventListener('click', clearBlockedAttempts);
     }
 
-    // Manual add IP button
     const addBtn = document.getElementById('lan_whitelist_add_manual');
     if (addBtn) {
         addBtn.addEventListener('click', async () => {
@@ -281,7 +227,6 @@ function setupEventHandlers() {
                 toastr.warning('Please enter an IP address or subnet');
                 return;
             }
-
             await addToWhitelist(input.value.trim());
             input.value = '';
         });
@@ -289,13 +234,9 @@ function setupEventHandlers() {
 }
 
 function startAutoRefresh() {
-    if (refreshTimer) {
-        clearInterval(refreshTimer);
-    }
-
-    const settings = extension_settings[MODULE_NAME];
-    if (settings && settings.autoRefresh) {
-        refreshTimer = setInterval(refreshData, settings.refreshInterval || 5000);
+    if (refreshTimer) clearInterval(refreshTimer);
+    if (currentSettings.autoRefresh) {
+        refreshTimer = setInterval(refreshData, currentSettings.refreshInterval || 5000);
     }
 }
 
@@ -306,38 +247,28 @@ function stopAutoRefresh() {
     }
 }
 
-async function init() {
+// Initialize extension
+jQuery(async () => {
     try {
+        console.log('[LAN Whitelist] Initializing extension...');
+
         loadSettings();
 
-        const settingsHtml = await renderExtensionTemplateAsync(MODULE_NAME, 'settings');
-        const container = document.getElementById('extensions_settings2');
-
-        if (container && settingsHtml) {
-            container.insertAdjacentHTML('beforeend', settingsHtml);
-        }
+        const settingsHtmlPath = `${extensionFolderPath}/settings.html`;
+        const settingsHtml = await $.get(settingsHtmlPath);
+        $('#extensions_settings').append(settingsHtml);
 
         setupEventHandlers();
         await refreshData();
         startAutoRefresh();
 
-        console.log('LAN Whitelist Manager extension loaded successfully');
+        console.log('[LAN Whitelist] Extension initialized successfully');
     } catch (error) {
-        console.error('Failed to initialize LAN Whitelist Manager:', error);
-        throw error;
-    }
-}
-
-// Initialize when DOM is ready
-jQuery(async () => {
-    try {
-        await init();
-    } catch (error) {
-        console.error('LAN Whitelist Manager initialization error:', error);
+        console.error('[LAN Whitelist] Error during initialization:', error);
+        toastr.error('LAN Whitelist Manager failed to load. Check console for details.');
     }
 });
 
-// Cleanup on page unload
 window.addEventListener('beforeunload', () => {
     stopAutoRefresh();
 });
