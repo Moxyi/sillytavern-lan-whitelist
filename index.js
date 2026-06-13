@@ -22,127 +22,136 @@ function saveSettings() {
     localStorage.setItem(`st-ext-${MODULE_NAME}-settings`, JSON.stringify(currentSettings));
 }
 
-// 使用 Canvas 手动绘制二维码（不依赖外部库）
-function generateQRMatrix(text) {
-    // 简化版二维码生成算法
-    const size = 25; // 25x25 的二维码
-    const matrix = [];
-
-    // 初始化矩阵
-    for (let i = 0; i < size; i++) {
-        matrix[i] = [];
-        for (let j = 0; j < size; j++) {
-            matrix[i][j] = 0;
-        }
+// 加载 qrcode-generator 库 (真正成熟的开源库)
+async function loadQRCodeLibrary() {
+    if (window.qrcode) {
+        return Promise.resolve();
     }
 
-    // 添加定位图案（三个角）
-    function addFinderPattern(x, y) {
-        for (let i = -1; i <= 7; i++) {
-            for (let j = -1; j <= 7; j++) {
-                const row = y + i;
-                const col = x + j;
-                if (row >= 0 && row < size && col >= 0 && col < size) {
-                    if (i === -1 || i === 7 || j === -1 || j === 7) {
-                        matrix[row][col] = 0;
-                    } else if ((i >= 0 && i <= 6 && (j === 0 || j === 6)) ||
-                               (j >= 0 && j <= 6 && (i === 0 || i === 6)) ||
-                               (i >= 2 && i <= 4 && j >= 2 && j <= 4)) {
-                        matrix[row][col] = 1;
-                    }
-                }
-            }
-        }
-    }
-
-    // 左上
-    addFinderPattern(0, 0);
-    // 右上
-    addFinderPattern(size - 7, 0);
-    // 左下
-    addFinderPattern(0, size - 7);
-
-    // 编码数据
-    const data = text.split('').map(c => c.charCodeAt(0));
-    let bitIndex = 0;
-
-    for (let i = 8; i < size - 8; i++) {
-        for (let j = 8; j < size - 8; j++) {
-            if (bitIndex < data.length * 8) {
-                const byteIndex = Math.floor(bitIndex / 8);
-                const bitPos = 7 - (bitIndex % 8);
-                matrix[i][j] = (data[byteIndex] >> bitPos) & 1;
-                bitIndex++;
-            }
-        }
-    }
-
-    return matrix;
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        // 使用 qrcode-generator，一个成熟的日本开源 QR 码库
+        script.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+        script.onload = () => {
+            console.log('[LAN Whitelist] QR 码库加载成功');
+            resolve();
+        };
+        script.onerror = () => {
+            // 降级到另一个 CDN
+            const script2 = document.createElement('script');
+            script2.src = 'https://unpkg.com/qrcode-generator@1.4.4/qrcode.min.js';
+            script2.onload = () => {
+                console.log('[LAN Whitelist] QR 码库加载成功（备用源）');
+                resolve();
+            };
+            script2.onerror = reject;
+            document.head.appendChild(script2);
+        };
+        document.head.appendChild(script);
+    });
 }
 
-function drawQRCodeManually(text) {
-    const canvas = document.getElementById('lan_whitelist_qrcode');
-    if (!canvas) {
-        console.error('[LAN Whitelist] Canvas not found');
+// 使用 qrcode-generator 绘制真正的二维码
+async function drawQRCode(text) {
+    const container = document.getElementById('lan_whitelist_qrcode');
+    if (!container) {
+        console.error('[LAN Whitelist] 找不到二维码容器');
         return;
     }
 
-    const matrix = generateQRMatrix(text);
-    const moduleSize = 10; // 每个模块10像素
-    const quietZone = 4; // 留白
-    const canvasSize = (matrix.length + quietZone * 2) * moduleSize;
+    try {
+        console.log('[LAN Whitelist] 开始加载 QR 码库...');
+        await loadQRCodeLibrary();
 
-    canvas.width = canvasSize;
-    canvas.height = canvasSize;
+        if (!window.qrcode) {
+            throw new Error('QR 码库未加载');
+        }
 
-    const ctx = canvas.getContext('2d');
+        console.log('[LAN Whitelist] 开始生成二维码，内容:', text);
 
-    // 白色背景
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvasSize, canvasSize);
+        // 创建二维码对象
+        const qr = window.qrcode(0, 'H'); // 类型 0（自动），纠错级别 H（最高）
+        qr.addData(text);
+        qr.make();
 
-    // 绘制黑色模块
-    ctx.fillStyle = '#000000';
-    for (let row = 0; row < matrix.length; row++) {
-        for (let col = 0; col < matrix[row].length; col++) {
-            if (matrix[row][col] === 1) {
-                ctx.fillRect(
-                    (col + quietZone) * moduleSize,
-                    (row + quietZone) * moduleSize,
-                    moduleSize,
-                    moduleSize
-                );
+        // 清空容器
+        container.innerHTML = '';
+
+        // 创建 Canvas
+        const canvas = document.createElement('canvas');
+        const moduleCount = qr.getModuleCount();
+        const cellSize = 8; // 每个模块 8 像素
+        const margin = 4; // 4 个模块的边距
+        const size = (moduleCount + margin * 2) * cellSize;
+
+        canvas.width = size;
+        canvas.height = size;
+        canvas.style.border = '2px solid var(--SmartThemeBorderColor)';
+        canvas.style.borderRadius = '5px';
+        canvas.style.display = 'block';
+        canvas.style.margin = '0 auto';
+
+        const ctx = canvas.getContext('2d');
+
+        // 白色背景
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, size, size);
+
+        // 绘制二维码模块
+        ctx.fillStyle = '#000000';
+        for (let row = 0; row < moduleCount; row++) {
+            for (let col = 0; col < moduleCount; col++) {
+                if (qr.isDark(row, col)) {
+                    ctx.fillRect(
+                        (col + margin) * cellSize,
+                        (row + margin) * cellSize,
+                        cellSize,
+                        cellSize
+                    );
+                }
             }
         }
-    }
 
-    console.log('[LAN Whitelist] 二维码绘制完成');
+        container.appendChild(canvas);
 
-    // 显示状态
-    const statusEl = document.getElementById('lan_whitelist_qr_status');
-    if (statusEl) {
-        statusEl.innerHTML = `
-            <div style="margin-top: 10px;">
-                <div style="font-weight: bold; margin-bottom: 5px; color: #4CAF50;">✅ 二维码已生成</div>
-                <div style="font-size: 13px; margin-bottom: 5px;">📱 用手机相机或微信扫描</div>
-                <div style="font-family: monospace; background: var(--black50a); padding: 8px; border-radius: 4px; word-break: break-all; font-size: 0.8em;">
-                    ${text}
+        console.log('[LAN Whitelist] 二维码生成成功！模块数:', moduleCount);
+
+        // 显示状态
+        const statusEl = document.getElementById('lan_whitelist_qr_status');
+        if (statusEl) {
+            statusEl.innerHTML = `
+                <div style="margin-top: 10px;">
+                    <div style="font-weight: bold; margin-bottom: 8px; color: #4CAF50; font-size: 16px;">✅ 二维码已生成</div>
+                    <div style="margin-bottom: 8px; font-size: 14px;">📱 使用手机相机或微信扫描</div>
+                    <div style="background: var(--black50a); padding: 10px; border-radius: 5px; margin: 8px 0;">
+                        <div style="font-size: 12px; color: var(--SmartThemeQuoteColor); margin-bottom: 4px;">配对地址：</div>
+                        <div style="font-family: monospace; font-size: 11px; word-break: break-all;">${text}</div>
+                    </div>
+                    <div style="color: var(--SmartThemeQuoteColor); font-size: 13px;">
+                        ⏱️ 此二维码 10 分钟内有效
+                    </div>
                 </div>
-                <div style="margin-top: 8px; color: var(--SmartThemeQuoteColor); font-size: 0.85em;">
-                    ⏱️ 此二维码 10 分钟内有效
-                </div>
-            </div>
-        `;
+            `;
+        }
+
+    } catch (error) {
+        console.error('[LAN Whitelist] 生成二维码失败:', error);
+        container.innerHTML = `<div style="color: red; padding: 20px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 10px;">❌</div>
+            <div>二维码生成失败</div>
+            <div style="font-size: 12px; margin-top: 8px; color: #999;">${error.message}</div>
+        </div>`;
     }
 }
 
-// 获取本机局域网 IP
+// 获取本机局域网 IP（过滤 Tailscale 等虚拟网卡）
 function getAllLocalIPs() {
     return new Promise((resolve) => {
         const ips = [];
         const RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
 
         if (!RTCPeerConnection) {
+            console.log('[LAN Whitelist] WebRTC 不支持，使用降级方案');
             const hostname = window.location.hostname;
             if (hostname !== 'localhost' && hostname !== '127.0.0.1' && /^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
                 resolve([hostname]);
@@ -158,14 +167,31 @@ function getAllLocalIPs() {
         pc.onicecandidate = (ice) => {
             if (!ice || !ice.candidate || !ice.candidate.candidate) {
                 pc.close();
-                const uniqueIPs = [...new Set(ips)].filter(ip =>
-                    ip !== '127.0.0.1' &&
-                    ip !== 'localhost' &&
-                    !ip.startsWith('0.') &&
-                    /^\d+\.\d+\.\d+\.\d+$/.test(ip)
-                );
-                console.log('[LAN Whitelist] 检测到 IP:', uniqueIPs);
-                resolve(uniqueIPs);
+
+                // 过滤 IP：
+                // 1. 移除 127.0.0.1
+                // 2. 移除 100.x.x.x (Tailscale)
+                // 3. 只保留私有 IP (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+                const validIPs = [...new Set(ips)].filter(ip => {
+                    if (ip === '127.0.0.1' || ip === 'localhost') return false;
+                    if (!(/^\d+\.\d+\.\d+\.\d+$/.test(ip))) return false;
+
+                    const parts = ip.split('.').map(Number);
+
+                    // Tailscale (100.64.0.0/10)
+                    if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) return false;
+
+                    // 只保留私有 IP 段
+                    if (parts[0] === 192 && parts[1] === 168) return true; // 192.168.0.0/16
+                    if (parts[0] === 10) return true; // 10.0.0.0/8
+                    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true; // 172.16.0.0/12
+
+                    return false;
+                });
+
+                console.log('[LAN Whitelist] 所有检测到的 IP:', ips);
+                console.log('[LAN Whitelist] 过滤后的局域网 IP:', validIPs);
+                resolve(validIPs);
                 return;
             }
 
@@ -185,14 +211,25 @@ function getAllLocalIPs() {
 
         setTimeout(() => {
             pc.close();
-            const uniqueIPs = [...new Set(ips)].filter(ip =>
-                ip !== '127.0.0.1' &&
-                ip !== 'localhost' &&
-                !ip.startsWith('0.') &&
-                /^\d+\.\d+\.\d+\.\d+$/.test(ip)
-            );
-            console.log('[LAN Whitelist] 超时，检测到 IP:', uniqueIPs);
-            resolve(uniqueIPs);
+
+            const validIPs = [...new Set(ips)].filter(ip => {
+                if (ip === '127.0.0.1' || ip === 'localhost') return false;
+                if (!(/^\d+\.\d+\.\d+\.\d+$/.test(ip))) return false;
+
+                const parts = ip.split('.').map(Number);
+
+                if (parts[0] === 100 && parts[1] >= 64 && parts[1] <= 127) return false;
+
+                if (parts[0] === 192 && parts[1] === 168) return true;
+                if (parts[0] === 10) return true;
+                if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+
+                return false;
+            });
+
+            console.log('[LAN Whitelist] 超时，所有检测到的 IP:', ips);
+            console.log('[LAN Whitelist] 过滤后的局域网 IP:', validIPs);
+            resolve(validIPs);
         }, 5000);
     });
 }
@@ -228,30 +265,22 @@ function generatePairingUrl(serverIp, port) {
 
 async function generateQRCode() {
     try {
-        console.log('[LAN Whitelist] 开始生成二维码...');
+        console.log('[LAN Whitelist] ===== 开始生成二维码 =====');
         toastr.info('正在检测局域网地址...', '局域网配对', { timeOut: 2000 });
 
         const localIPs = await getAllLocalIPs();
-        console.log('[LAN Whitelist] 检测到的 IP:', localIPs);
 
         if (localIPs.length === 0) {
-            toastr.error('未检测到局域网地址！\n请确保已连接 WiFi 且不是通过 127.0.0.1 访问', '局域网配对', { timeOut: 5000 });
+            console.error('[LAN Whitelist] 未检测到有效的局域网 IP');
+            toastr.error('未检测到局域网地址！\n请确保：\n1. 已连接 WiFi\n2. 不是通过 127.0.0.1 访问', '局域网配对', { timeOut: 5000 });
 
-            // 显示详细错误信息
             const canvas = document.getElementById('lan_whitelist_qrcode');
             if (canvas) {
-                const ctx = canvas.getContext('2d');
-                canvas.width = 300;
-                canvas.height = 150;
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(0, 0, 300, 150);
-                ctx.fillStyle = '#f44336';
-                ctx.font = '14px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('未检测到局域网地址', 150, 70);
-                ctx.fillStyle = '#666';
-                ctx.font = '12px sans-serif';
-                ctx.fillText('请连接 WiFi 后刷新页面', 150, 100);
+                canvas.innerHTML = `<div style="padding: 20px; text-align: center; color: #f44336;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">⚠️</div>
+                    <div>未检测到局域网地址</div>
+                    <div style="font-size: 12px; margin-top: 8px; color: #999;">请连接 WiFi 后刷新页面</div>
+                </div>`;
             }
             return;
         }
@@ -259,10 +288,13 @@ async function generateQRCode() {
         const serverIp = localIPs[0];
         const port = getCurrentPort();
 
+        console.log('[LAN Whitelist] 使用 IP:', serverIp);
+        console.log('[LAN Whitelist] 端口:', port);
+
         pairingUrl = generatePairingUrl(serverIp, port);
         console.log('[LAN Whitelist] 配对 URL:', pairingUrl);
 
-        drawQRCodeManually(pairingUrl);
+        await drawQRCode(pairingUrl);
 
         toastr.success(`服务器 IP: ${serverIp}\n二维码已生成`, '局域网配对', { timeOut: 3000 });
 
@@ -302,7 +334,7 @@ function copyPairingUrl() {
     }
 
     navigator.clipboard.writeText(pairingUrl).then(() => {
-        toastr.success('配对链接已复制，发送给手机即可', '局域网配对', { timeOut: 2000 });
+        toastr.success('配对链接已复制', '局域网配对', { timeOut: 2000 });
     }).catch(() => {
         const textarea = document.createElement('textarea');
         textarea.value = pairingUrl;
@@ -321,11 +353,14 @@ async function handlePairingRequest() {
     const token = urlParams.get('pair');
 
     if (token) {
-        console.log('[LAN Whitelist] 配对请求 token:', token);
+        console.log('[LAN Whitelist] 检测到配对请求');
 
         const clientIPs = await getAllLocalIPs();
         const clientIP = clientIPs[0] || 'unknown';
         const serverIP = window.location.hostname;
+
+        console.log('[LAN Whitelist] 客户端 IP:', clientIP);
+        console.log('[LAN Whitelist] 服务器 IP:', serverIP);
 
         const pairingKey = `st-pairing-${token}`;
         const pairingData = JSON.parse(localStorage.getItem(pairingKey) || '{}');
@@ -354,14 +389,12 @@ function showPairingSuccessPage(clientIP, serverIP) {
                 </div>
 
                 <div style="background: #E8F5E9; padding: 12px; border-radius: 8px; margin: 20px 0; font-size: 14px; color: #2E7D32;">
-                    ✨ 您的设备已添加到白名单，现在可以访问 SillyTavern 了！
+                    ✨ 您的设备已添加到白名单
                 </div>
 
-                <div style="margin-top: 25px;">
-                    <a href="/" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 25px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-                        🚀 前往 SillyTavern
-                    </a>
-                </div>
+                <a href="/" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 25px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); margin-top: 10px;">
+                    🚀 前往 SillyTavern
+                </a>
             </div>
         </div>
     `;
@@ -403,7 +436,7 @@ async function renderNetworkInfo() {
     const container = document.getElementById('lan_whitelist_network_info');
     if (!container) return;
 
-    container.innerHTML = '<div class="notice">🔍 正在检测本机局域网地址...</div>';
+    container.innerHTML = '<div class="notice">🔍 正在检测局域网地址...</div>';
 
     const localIPs = await getAllLocalIPs();
 
@@ -415,6 +448,9 @@ async function renderNetworkInfo() {
                     <strong>请确保：</strong><br>
                     ✓ 已连接到 WiFi 或局域网<br>
                     ✓ 不是通过 localhost 或 127.0.0.1 访问
+                </p>
+                <p style="font-size: 12px; margin-top: 10px; color: var(--SmartThemeQuoteColor);">
+                    💡 提示：会自动过滤 Tailscale 等虚拟网卡
                 </p>
             </div>
         `;
@@ -496,7 +532,7 @@ function setupEventHandlers() {
 
 jQuery(async () => {
     try {
-        console.log('[LAN Whitelist] 初始化扩展...');
+        console.log('[LAN Whitelist] ===== 扩展初始化 =====');
         loadSettings();
 
         await handlePairingRequest();
