@@ -13,100 +13,48 @@
 
 ## 安装方法
 
-### 方法 1: 通过扩展安装器（推荐）
+### 第一步：安装前端扩展
+
+**方法 A: 通过扩展管理器（推荐）**
 
 1. 打开 SillyTavern
 2. 进入 `扩展管理` → `安装扩展`
-3. 输入仓库地址：`https://github.com/Moxyi/sillytavern-lan-whitelist`
+3. 输入：`https://github.com/Moxyi/sillytavern-lan-whitelist`
 4. 点击安装
 
-### 方法 2: 手动安装
+**方法 B: 手动安装**
 
 ```bash
 cd /path/to/SillyTavern/public/scripts/extensions/third-party
 git clone https://github.com/Moxyi/sillytavern-lan-whitelist.git
 ```
 
-## 配置
+### 第二步：安装服务器插件
 
-### 1. 启用白名单模式
+```bash
+cd /path/to/SillyTavern/plugins
+git clone https://github.com/Moxyi/sillytavern-lan-whitelist.git lan-whitelist-manager
+```
 
-在 `config.yaml` 中：
+### 第三步：配置
+
+**1. 启用服务器插件**
+
+编辑 `config.yaml`：
 
 ```yaml
+# 启用服务器插件
+enableServerPlugins: true
+
 # 启用白名单模式
 whitelistMode: true
 
-# 初始白名单（至少包含本机）
+# 初始白名单
 whitelist:
   - 127.0.0.1
 ```
 
-### 2. 配置 API 端点
-
-本扩展需要服务器端支持。将以下代码添加到 `server.js` 中（或创建一个 Express 中间件）：
-
-```javascript
-// 在 server.js 中添加这些路由
-import os from 'os';
-import { 
-    addWhitelistEntry, 
-    getWhitelistEntries, 
-    getBlockedAccessAttempts, 
-    clearBlockedAccessAttempts 
-} from './src/middleware/whitelist.js';
-
-// 获取网络接口信息
-app.get('/api/whitelist-manager/network', (req, res) => {
-    const interfaces = os.networkInterfaces();
-    const result = [];
-    
-    for (const [name, addrs] of Object.entries(interfaces)) {
-        for (const addr of addrs) {
-            if (addr.family === 'IPv4' && !addr.internal) {
-                const parts = addr.address.split('.');
-                const subnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
-                result.push({
-                    name,
-                    address: addr.address,
-                    subnet,
-                });
-            }
-        }
-    }
-    
-    res.json({ interfaces: result });
-});
-
-// 获取白名单
-app.get('/api/whitelist-manager/whitelist', (req, res) => {
-    res.json({ entries: getWhitelistEntries() });
-});
-
-// 添加到白名单
-app.post('/api/whitelist-manager/whitelist/add', (req, res) => {
-    try {
-        const { ip } = req.body;
-        addWhitelistEntry(ip, true);
-        res.json({ success: true });
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
-
-// 获取被拦截的设备
-app.get('/api/whitelist-manager/blocked', (req, res) => {
-    res.json({ attempts: getBlockedAccessAttempts() });
-});
-
-// 清空拦截记录
-app.post('/api/whitelist-manager/blocked/clear', (req, res) => {
-    clearBlockedAccessAttempts();
-    res.json({ success: true });
-});
-```
-
-### 3. 重启 SillyTavern
+**2. 重启 SillyTavern**
 
 ```bash
 npm start
@@ -120,46 +68,45 @@ npm start
 4. 查看网络接口并点击按钮添加局域网段
 5. 或者在被拦截设备列表中批准新设备
 
-## 工作原理
+## 文件说明
 
-1. **前端扩展** 提供用户界面
-2. **API 端点** 与服务器通信
-3. **白名单中间件** 动态更新 `whitelist.txt`
-4. **无需重启** - 白名单立即生效
+- `index.js` - 前端扩展代码
+- `server-plugin.js` - 服务器插件（需复制到 `plugins/` 目录）
+- `settings.html` - 设置界面
+- `style.css` - 样式
 
-## 注意事项
+## 安装位置
 
-- 确保在 `config.yaml` 中启用了 `whitelistMode: true`
-- 首次使用时至少要在白名单中添加 `127.0.0.1`
-- 添加整个网段 (如 `192.168.1.0/24`) 会允许该网段内的所有设备
+- **前端扩展**: `SillyTavern/public/scripts/extensions/third-party/sillytavern-lan-whitelist/`
+- **服务器插件**: `SillyTavern/plugins/lan-whitelist-manager/`（将 `server-plugin.js` 重命名为 `index.js`）
 
 ## 故障排除
 
-### 扩展无法加载
+### 扩展显示 "No network interfaces found"
 
-- 检查文件是否在正确的目录：`public/scripts/extensions/third-party/sillytavern-lan-whitelist/`
-- 刷新页面并检查浏览器控制台是否有错误
+- 确认服务器插件已正确安装到 `plugins/lan-whitelist-manager/` 目录
+- 确认 `config.yaml` 中 `enableServerPlugins: true`
+- 重启 SillyTavern
+- 检查服务器日志是否显示 "LAN Whitelist Manager API plugin loaded"
 
 ### API 请求失败
 
-- 确保已在 `server.js` 中添加了 API 路由
-- 重启 SillyTavern
-- 检查浏览器控制台和服务器日志
-
-### 添加白名单后仍无法访问
-
-- 确认 `whitelistMode: true` 已启用
-- 检查添加的 IP 是否正确
-- 检查防火墙设置
+- 确保服务器插件的 `server-plugin.js` 重命名为 `index.js`
+- 检查浏览器控制台错误信息
+- 确认白名单模式已启用
 
 ## 许可证
 
 MIT License
 
-## 作者
+## 版本历史
 
-Moxyi
+**v1.0.3** (最新)
+- ✅ 使用服务器插件系统，不修改 SillyTavern 核心代码
+- ✅ 改进安装流程
 
-## 贡献
+**v1.0.2**
+- ✅ 修复扩展加载错误
 
-欢迎提交 Issue 和 Pull Request！
+**v1.0.0**
+- 初始版本

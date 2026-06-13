@@ -2,7 +2,7 @@ import { getRequestHeaders, saveSettingsDebounced, eventSource, event_types } fr
 import { extension_settings, renderExtensionTemplateAsync } from '../../extensions.js';
 
 const MODULE_NAME = 'lan-whitelist';
-const API_BASE = '/api/whitelist-manager';
+const API_BASE = '/api/plugins/lan-whitelist-manager';
 
 const defaultSettings = {
     autoRefresh: true,
