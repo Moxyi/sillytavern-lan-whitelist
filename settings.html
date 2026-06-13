@@ -1,0 +1,39 @@
+<div id="lan_whitelist_settings">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b>LAN Whitelist Manager</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+            <h3>Network Interfaces</h3>
+            <div id="lan_whitelist_network_info" class="margin-bot-10px">
+                Loading...
+            </div>
+
+            <h3>Current Whitelist</h3>
+            <div id="lan_whitelist_entries" class="margin-bot-10px">
+                Loading...
+            </div>
+
+            <h3>Add IP Manually</h3>
+            <div class="flex-container margin-bot-10px">
+                <input id="lan_whitelist_manual_ip" class="text_pole" type="text" placeholder="192.168.1.100 or 192.168.1.0/24">
+                <button id="lan_whitelist_add_manual" class="menu_button">Add to Whitelist</button>
+            </div>
+
+            <h3>Blocked Devices</h3>
+            <div id="lan_whitelist_blocked" class="margin-bot-10px">
+                Loading...
+            </div>
+
+            <div class="flex-container margin-bot-10px">
+                <button id="lan_whitelist_refresh" class="menu_button">
+                    <i class="fa-solid fa-sync"></i> Refresh
+                </button>
+                <button id="lan_whitelist_clear_blocked" class="menu_button">
+                    <i class="fa-solid fa-trash"></i> Clear Blocked List
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

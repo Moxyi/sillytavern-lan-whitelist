@@ -1,0 +1,81 @@
+#lan_whitelist_settings {
+    padding: 10px;
+}
+
+.network-interfaces,
+.whitelist-entries,
+.blocked-attempts {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.network-interface,
+.whitelist-entry,
+.blocked-attempt {
+    padding: 10px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 5px;
+    background-color: var(--black30a);
+}
+
+.network-interface {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.interface-name {
+    font-weight: bold;
+    color: var(--SmartThemeQuoteColor);
+}
+
+.interface-ip {
+    flex: 1;
+    font-family: monospace;
+}
+
+.whitelist-entry {
+    display: flex;
+    align-items: center;
+}
+
+.entry-ip {
+    font-family: monospace;
+    color: var(--SmartThemeQuoteColor);
+}
+
+.blocked-attempt {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.attempt-info {
+    flex: 1;
+}
+
+.attempt-ip {
+    font-family: monospace;
+    font-weight: bold;
+    color: var(--SmartThemeQuoteColor);
+}
+
+.attempt-time {
+    font-size: 0.9em;
+    opacity: 0.7;
+}
+
+.attempt-count {
+    font-size: 0.9em;
+    color: var(--SmartThemeEmColor);
+}
+
+.notice {
+    padding: 10px;
+    text-align: center;
+    opacity: 0.6;
+    font-style: italic;
+}

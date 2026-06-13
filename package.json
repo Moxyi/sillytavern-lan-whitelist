@@ -1,0 +1,16 @@
+{
+  "name": "sillytavern-lan-whitelist",
+  "version": "1.0.0",
+  "description": "Dynamic IP whitelist manager for SillyTavern",
+  "keywords": ["sillytavern", "extension", "whitelist", "lan", "network"],
+  "author": "Moxyi",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Moxyi/sillytavern-lan-whitelist.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Moxyi/sillytavern-lan-whitelist/issues"
+  },
+  "homepage": "https://github.com/Moxyi/sillytavern-lan-whitelist#readme"
+}
