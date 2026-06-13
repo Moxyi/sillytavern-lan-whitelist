@@ -1,0 +1,48 @@
+# 上传到 GitHub 的命令
+
+## 1. 在 GitHub 上创建仓库
+
+访问：https://github.com/new
+
+- 仓库名：`sillytavern-lan-whitelist`
+- 描述：`Dynamic IP whitelist manager for SillyTavern - No restart required`
+- 公开（Public）
+- 不要勾选任何初始化选项
+
+## 2. 推送代码
+
+在 PowerShell 中运行以下命令：
+
+```powershell
+cd F:\AI\sillytavern-lan-whitelist
+git remote add origin https://github.com/Moxyi/sillytavern-lan-whitelist.git
+git push -u origin main
+```
+
+## 3. 完成！
+
+现在其他用户可以通过以下方式安装：
+
+**在 SillyTavern 扩展管理器中：**
+```
+https://github.com/Moxyi/sillytavern-lan-whitelist
+```
+
+**或手动克隆：**
+```bash
+cd /path/to/SillyTavern/public/scripts/extensions/third-party
+git clone https://github.com/Moxyi/sillytavern-lan-whitelist.git
+```
+
+---
+
+## 修复日志
+
+**v1.0.1 (最新)**
+- ✅ 修复扩展加载失败的问题
+- ✅ 修复导入语句
+- ✅ 改进错误处理
+- ✅ 修复事件绑定使用 data 属性而非内联 onclick
+
+**v1.0.0**
+- 初始版本
