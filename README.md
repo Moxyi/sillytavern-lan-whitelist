@@ -1,112 +1,124 @@
-# SillyTavern LAN Whitelist Manager
+# SillyTavern 局域网白名单管理器
 
-动态管理 SillyTavern 的 IP 白名单，无需重启服务器即可添加新设备。
+动态管理 SillyTavern 的 IP 白名单，支持二维码配对、网络检测，无需重启服务器。
 
-## 功能特性
+## ✨ 功能特性
 
-- 🔍 查看服务器所有网络接口和 IP 地址
-- ✅ 一键添加整个局域网段到白名单
-- 📋 查看当前白名单条目
-- 🚫 查看被拦截的设备并快速批准
-- 🔄 自动刷新状态
-- ⚡ 无需重启服务器
+### 📱 扫码配对（推荐）
+- 生成配对二维码或链接
+- 手机扫码后自动添加 IP 到白名单
+- 支持 iPhone、Android 等所有设备
+- 10分钟内有效，安全便捷
 
-## 安装方法
+### 🌐 网络检测
+- 自动检测局域网 IP 地址
+- 支持 WiFi 和手机热点
+- 显示可访问的 URL
 
-### 第一步：安装前端扩展
+### ✅ 白名单管理
+- 查看当前白名单
+- 手动添加/删除 IP
+- 支持单个 IP 或 CIDR 格式（如 192.168.1.0/24）
+- 本地持久化存储
 
-**方法 A: 通过扩展管理器（推荐）**
+### 🚫 拦截管理
+- 查看被拦截的设备
+- 一键批准访问
+
+## 📦 安装方法
+
+### 方法 1: 通过扩展管理器（推荐）
 
 1. 打开 SillyTavern
 2. 进入 `扩展管理` → `安装扩展`
 3. 输入：`https://github.com/Moxyi/sillytavern-lan-whitelist`
 4. 点击安装
 
-**方法 B: 手动安装**
+### 方法 2: 手动安装
 
 ```bash
 cd /path/to/SillyTavern/public/scripts/extensions/third-party
 git clone https://github.com/Moxyi/sillytavern-lan-whitelist.git
 ```
 
-### 第二步：安装服务器插件
+## 🚀 使用方法
 
-```bash
-cd /path/to/SillyTavern/plugins
-git clone https://github.com/Moxyi/sillytavern-lan-whitelist.git lan-whitelist-manager
-```
-
-### 第三步：配置
-
-**1. 启用服务器插件**
+### 1. 启用白名单模式
 
 编辑 `config.yaml`：
 
 ```yaml
-# 启用服务器插件
-enableServerPlugins: true
-
-# 启用白名单模式
 whitelistMode: true
-
-# 初始白名单
 whitelist:
   - 127.0.0.1
 ```
 
-**2. 重启 SillyTavern**
+重启 SillyTavern。
 
-```bash
-npm start
-```
+### 2. 配对新设备
 
-## 使用方法
+#### 方式 A：扫码配对（推荐）
 
-1. 打开 SillyTavern
-2. 进入 `扩展设置`
-3. 找到 `LAN Whitelist Manager` 部分
-4. 查看网络接口并点击按钮添加局域网段
-5. 或者在被拦截设备列表中批准新设备
+1. 在电脑上打开 SillyTavern
+2. 进入 `扩展设置` → `局域网白名单管理器`
+3. 点击 **"生成配对二维码"**
+4. 用手机扫描二维码
+5. 手机会自动跳转并添加到白名单
 
-## 文件说明
+#### 方式 B：手动添加
 
-- `index.js` - 前端扩展代码
-- `server-plugin.js` - 服务器插件（需复制到 `plugins/` 目录）
-- `settings.html` - 设置界面
-- `style.css` - 样式
+1. 查看手机的局域网 IP（设置 → WiFi → 详情）
+2. 在扩展中手动输入 IP 并添加
 
-## 安装位置
+### 3. 热点使用
 
-- **前端扩展**: `SillyTavern/public/scripts/extensions/third-party/sillytavern-lan-whitelist/`
-- **服务器插件**: `SillyTavern/plugins/lan-whitelist-manager/`（将 `server-plugin.js` 重命名为 `index.js`）
+- **手机开热点给电脑**：电脑连接手机热点后，在扩展中会显示当前网络地址
+- **电脑开热点给手机**：手机连接电脑热点后，扫码配对即可
 
-## 故障排除
+## 💡 工作原理
 
-### 扩展显示 "No network interfaces found"
+1. **不依赖服务器插件**：所有功能在前端完成
+2. **本地存储**：白名单保存在浏览器 localStorage
+3. **配对机制**：生成临时令牌，手机访问后自动添加 IP
 
-- 确认服务器插件已正确安装到 `plugins/lan-whitelist-manager/` 目录
-- 确认 `config.yaml` 中 `enableServerPlugins: true`
-- 重启 SillyTavern
-- 检查服务器日志是否显示 "LAN Whitelist Manager API plugin loaded"
+## ⚠️ 注意事项
 
-### API 请求失败
+- 白名单存储在**浏览器本地**，清除浏览器数据会丢失
+- 配对链接 10 分钟内有效
+- 热点场景下，IP 可能会变化，需重新配对
+- 建议通过局域网 IP（如 `http://192.168.1.x:8000`）访问以启用完整功能
 
-- 确保服务器插件的 `server-plugin.js` 重命名为 `index.js`
-- 检查浏览器控制台错误信息
-- 确认白名单模式已启用
+## 🔧 故障排除
 
-## 许可证
+### 扩展不显示
+
+- 刷新页面
+- 检查浏览器控制台（F12）是否有错误
+- 确认文件在正确目录：`public/scripts/extensions/third-party/sillytavern-lan-whitelist/`
+
+### 二维码无法生成
+
+- 确保通过局域网 IP 访问（不是 localhost）
+- 检查浏览器是否支持 Canvas
+
+### 配对失败
+
+- 确保手机和电脑在同一局域网/热点
+- 检查防火墙设置
+- 手动复制配对链接发送给手机
+
+## 📜 许可证
 
 MIT License
 
-## 版本历史
+## 🎯 版本历史
 
-**v1.0.3** (最新)
-- ✅ 使用服务器插件系统，不修改 SillyTavern 核心代码
-- ✅ 改进安装流程
+**v2.0.0** (最新)
+- ✅ 完全重写，支持二维码配对
+- ✅ 网络检测和 URL 生成
+- ✅ 支持热点场景
+- ✅ 优化界面和样式
+- ✅ 本地存储，无需服务器插件
 
-**v1.0.2**
-- ✅ 修复扩展加载错误
-
-**v1.0.0**
+**v1.0.x**
 - 初始版本
