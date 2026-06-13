@@ -1,5 +1,5 @@
-import { getRequestHeaders, saveSettingsDebounced, eventSource, event_types } from '../../../script.js';
-import { extension_settings, renderExtensionTemplateAsync } from '../../extensions.js';
+import { getRequestHeaders, saveSettingsDebounced, eventSource, event_types } from '../../../../script.js';
+import { extension_settings, renderExtensionTemplateAsync } from '../../../extensions.js';
 
 const MODULE_NAME = 'lan-whitelist';
 const API_BASE = '/api/plugins/lan-whitelist-manager';
