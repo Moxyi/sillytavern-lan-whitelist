@@ -1,5 +1,16 @@
-#lan_whitelist_settings {
-    padding: 10px;
+.lan-whitelist-settings {
+    /* 使用默认的 inline-drawer 样式 */
+}
+
+.lan-whitelist-settings .inline-drawer-content h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: var(--SmartThemeEmColor);
+    font-size: 1.1em;
+}
+
+.lan-whitelist-settings .sysHR {
+    margin: 15px 0;
 }
 
 .network-interfaces,
@@ -7,7 +18,7 @@
 .blocked-attempts {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .network-interface,
@@ -32,18 +43,27 @@
 }
 
 .interface-ip {
-    flex: 1;
     font-family: monospace;
+    font-size: 1.1em;
+    margin: 2px 0;
+}
+
+.interface-url {
+    font-size: 0.9em;
+    opacity: 0.7;
 }
 
 .whitelist-entry {
     display: flex;
+    justify-content: space-between;
     align-items: center;
+    padding: 8px 12px;
 }
 
 .entry-ip {
     font-family: monospace;
     color: var(--SmartThemeQuoteColor);
+    font-size: 1.05em;
 }
 
 .blocked-attempt {
@@ -66,6 +86,7 @@
 .attempt-time {
     font-size: 0.9em;
     opacity: 0.7;
+    margin-top: 2px;
 }
 
 .attempt-count {
@@ -74,8 +95,39 @@
 }
 
 .notice {
-    padding: 10px;
+    padding: 15px;
     text-align: center;
-    opacity: 0.6;
+    opacity: 0.8;
     font-style: italic;
+    background-color: var(--black30a);
+    border-radius: 5px;
+    border: 1px dashed var(--SmartThemeBorderColor);
+}
+
+.notice p {
+    margin: 5px 0;
+}
+
+.notice code {
+    background-color: var(--black50a);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+#lan_whitelist_qrcode {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+#lan_whitelist_qr_status {
+    font-size: 0.9em;
+    margin-top: 8px;
+}
+
+.menu_button.compact {
+    padding: 4px 10px;
+    font-size: 0.9em;
 }

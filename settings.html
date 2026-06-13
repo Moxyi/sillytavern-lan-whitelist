@@ -1,37 +1,63 @@
-<div id="lan_whitelist_settings">
+<div id="lan_whitelist_settings" class="lan-whitelist-settings">
     <div class="inline-drawer">
         <div class="inline-drawer-toggle inline-drawer-header">
-            <b>LAN Whitelist Manager</b>
+            <b>局域网白名单管理器</b>
             <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
         </div>
         <div class="inline-drawer-content">
-            <h3>Network Interfaces</h3>
-            <div id="lan_whitelist_network_info" class="margin-bot-10px">
-                Loading...
+
+            <h4>📱 扫码配对（推荐）</h4>
+            <p style="margin-bottom: 10px;">手机扫描二维码后，会自动将手机 IP 添加到白名单</p>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <canvas id="lan_whitelist_qrcode" style="border: 2px solid var(--SmartThemeBorderColor); border-radius: 5px;"></canvas>
+                <div id="lan_whitelist_qr_status" style="margin-top: 5px; color: var(--SmartThemeQuoteColor);"></div>
+            </div>
+            <div class="flex-container" style="margin-bottom: 15px;">
+                <button id="lan_whitelist_generate_qr" class="menu_button">
+                    <i class="fa-solid fa-qrcode"></i> 生成配对二维码
+                </button>
+                <button id="lan_whitelist_copy_url" class="menu_button">
+                    <i class="fa-solid fa-copy"></i> 复制配对链接
+                </button>
             </div>
 
-            <h3>Current Whitelist</h3>
-            <div id="lan_whitelist_entries" class="margin-bot-10px">
-                Loading...
+            <hr class="sysHR" />
+
+            <h4>🌐 可用网络地址</h4>
+            <div id="lan_whitelist_network_info" style="margin-bottom: 15px;">
+                加载中...
             </div>
 
-            <h3>Add IP Manually</h3>
-            <div class="flex-container margin-bot-10px">
-                <input id="lan_whitelist_manual_ip" class="text_pole" type="text" placeholder="192.168.1.100 or 192.168.1.0/24">
-                <button id="lan_whitelist_add_manual" class="menu_button">Add to Whitelist</button>
+            <hr class="sysHR" />
+
+            <h4>✅ 当前白名单</h4>
+            <div id="lan_whitelist_entries" style="margin-bottom: 15px;">
+                加载中...
             </div>
 
-            <h3>Blocked Devices</h3>
-            <div id="lan_whitelist_blocked" class="margin-bot-10px">
-                Loading...
+            <hr class="sysHR" />
+
+            <h4>➕ 手动添加 IP</h4>
+            <div style="margin-bottom: 15px;">
+                <input id="lan_whitelist_manual_ip" class="text_pole" type="text" placeholder="例如: 192.168.1.100 或 192.168.1.0/24" style="width: 100%; margin-bottom: 5px;">
+                <button id="lan_whitelist_add_manual" class="menu_button" style="width: 100%;">
+                    <i class="fa-solid fa-plus"></i> 添加到白名单
+                </button>
             </div>
 
-            <div class="flex-container margin-bot-10px">
+            <hr class="sysHR" />
+
+            <h4>🚫 被拦截的设备</h4>
+            <div id="lan_whitelist_blocked" style="margin-bottom: 15px;">
+                暂无拦截记录
+            </div>
+
+            <div class="flex-container">
                 <button id="lan_whitelist_refresh" class="menu_button">
-                    <i class="fa-solid fa-sync"></i> Refresh
+                    <i class="fa-solid fa-sync"></i> 刷新
                 </button>
                 <button id="lan_whitelist_clear_blocked" class="menu_button">
-                    <i class="fa-solid fa-trash"></i> Clear Blocked List
+                    <i class="fa-solid fa-trash"></i> 清空拦截记录
                 </button>
             </div>
         </div>
